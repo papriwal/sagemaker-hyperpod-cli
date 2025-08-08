@@ -25,6 +25,42 @@ from typing import Dict, List, Any, Optional
 
 def setup(app):
     """Register our sphinx hooks."""
+    # Add CLI source path for sphinx-click
+    cli_path = Path(__file__).parent.parent / "src"
+    sys.path.insert(0, str(cli_path))
+    
+    # Mock the problematic decorators
+    from unittest.mock import MagicMock
+    
+    # Create a mock that acts like a decorator
+    def mock_generate_click_command(*args, **kwargs):
+        def decorator(func):
+            # Return the original function with minimal Click attributes
+            func.__click_params__ = []
+            return func
+        return decorator
+    
+    # Mock telemetry decorator
+    def mock_telemetry_emitter(*args, **kwargs):
+        def decorator(func):
+            # Return the original function unchanged
+            return func
+        return decorator
+    
+    # Mock the entire inference_utils module
+    mock_inference_utils = MagicMock()
+    mock_inference_utils.generate_click_command = mock_generate_click_command
+    sys.modules['sagemaker.hyperpod.cli.inference_utils'] = mock_inference_utils
+    
+    # Mock the training_utils module
+    mock_training_utils = MagicMock()
+    mock_training_utils.generate_click_command = mock_generate_click_command
+    sys.modules['sagemaker.hyperpod.cli.training_utils'] = mock_training_utils
+    
+    # Mock the telemetry module
+    mock_telemetry = MagicMock()
+    mock_telemetry._hyperpod_telemetry_emitter = mock_telemetry_emitter
+    sys.modules['sagemaker.hyperpod.common.telemetry.telemetry_logging'] = mock_telemetry
 
 
 # Get version from setup.py
@@ -71,10 +107,34 @@ extensions = [
     "sphinx_copybutton",
     "sphinx.ext.autosummary",
     "sphinx.ext.autosectionlabel",
+    "sphinx_click",
 ]
 
 
-autodoc_mock_imports = ["pyspark", "feature_store_pyspark", "py4j"]
+autodoc_mock_imports = [
+    "pyspark", 
+    "feature_store_pyspark", 
+    "py4j",
+    "hyperpod_jumpstart_inference_template",
+    "hyperpod_custom_inference_template",
+    "hyperpod_pytorch_job_template",
+    "hyperpod_pytorch_job_template.registry",
+    "sagemaker_core",
+    "boto3",
+    "botocore",
+    "tabulate",
+    "kubernetes",
+    "kubernetes.client",
+    "ratelimit",
+    "sagemaker.hyperpod.cli.clients.kubernetes_client",
+    "sagemaker.hyperpod.cli.inference_utils",
+    "sagemaker.hyperpod.cli.inference_utils.generate_click_command",
+    "sagemaker.hyperpod.inference.hp_jumpstart_endpoint",
+    "sagemaker.hyperpod.inference.hp_endpoint",
+    "sagemaker.hyperpod.common.telemetry.telemetry_logging",
+    "sagemaker.hyperpod.common.telemetry.constants",
+    "sagemaker.hyperpod.common.utils"
+]
 
 source_suffix = {
     '.rst': 'restructuredtext',
