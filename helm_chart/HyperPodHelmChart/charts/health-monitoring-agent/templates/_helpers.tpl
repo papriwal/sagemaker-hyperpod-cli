@@ -55,7 +55,7 @@ Generate the health monitoring agent image URI based on AWS region
 */}}
 {{- define "health-monitoring-agent.imageUri" -}}
 {{- $region := "" -}}
-{{- $imageTag := .Values.imageTag | default "1.0.2239.0_1.0.456.0" -}}
+{{- $imageTag := .Values.imageTag | default "1.0.2297.0_1.0.474.0" -}}
 
 {{/* Debug: Show image tag selection if debug is enabled */}}
 {{- if .Values.debug -}}
