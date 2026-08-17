@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "extension-api" "context" $) }}
+  namespace: {{ .Values.namespace }}
+spec:
+  ports:
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 7443
+  selector:
+    control-plane: controller-manager
+  type: ClusterIP

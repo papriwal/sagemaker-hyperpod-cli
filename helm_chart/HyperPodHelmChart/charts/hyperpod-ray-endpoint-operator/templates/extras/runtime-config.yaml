@@ -1,0 +1,187 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-bearer-auth-suffix
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "hyperpod-ray-endpoint-operator.name" . }}
+    app.kubernetes.io/component: traefik-middleware
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replacePathRegex:
+    regex: "^/bearer-auth(.*)$"
+    replacement: "/$1"
+---
+apiVersion: access.sagemaker.amazonaws.com/v1alpha1
+kind: HyperpodRayEndpointAccessStrategy
+metadata:
+  name: ray-access-strategy-private
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "hyperpod-ray-endpoint-operator.name" . }}
+    app.kubernetes.io/component: access-strategy
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  accessType: ownerOnly
+  bearerAuthURLTemplate: "https://{{`{{ .RayCluster.Name }}-{{ .RayCluster.EncodedNamespace }}.{{ .Domain }}`}}/bearer-auth"
+  accessResourceTemplates:
+    - kind: Middleware
+      apiVersion: traefik.io/v1alpha1
+      namePrefix: cluster-forward-auth
+      template: |
+        spec:
+          forwardAuth:
+            address: "http://{{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "auth-middleware" "context" $) }}.{{ .Values.namespace }}.svc.cluster.local:8080/verify?cluster-uid={{`{{ .RayCluster.UID }}`}}"
+            trustForwardHeader: false
+            addAuthCookiesToResponse:
+              - ray_session
+            authRequestHeaders:
+              - Host
+              - X-Forwarded-Host
+              - X-Forwarded-Uri
+              - Cookie
+              - Authorization
+    - kind: Middleware
+      apiVersion: traefik.io/v1alpha1
+      namePrefix: cluster-bearer-auth
+      template: |
+        spec:
+          forwardAuth:
+            address: "http://{{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "auth-middleware" "context" $) }}.{{ .Values.namespace }}.svc.cluster.local:8080/bearer-auth?cluster-uid={{`{{ .RayCluster.UID }}`}}"
+            trustForwardHeader: false
+            addAuthCookiesToResponse:
+              - ray_session
+            authRequestHeaders:
+              - Host
+              - X-Forwarded-Host
+              - X-Forwarded-Uri
+              - Cookie
+              - Authorization
+    - kind: IngressRoute
+      apiVersion: traefik.io/v1alpha1
+      namePrefix: authorized-route
+      template: |
+        spec:
+          entryPoints:
+            - web
+          routes:
+            - match: "Host(`{{`{{ .RayCluster.Name }}-{{ .RayCluster.EncodedNamespace }}.{{ .Domain }}`}}`)"
+              kind: Rule
+              priority: 100
+              middlewares:
+                - name: cluster-forward-auth-{{`{{ .RayCluster.Name }}`}}
+                  namespace: "{{`{{ .RayCluster.Namespace }}`}}"
+              services:
+                - name: "{{`{{ .RayCluster.Name }}`}}-head-svc"
+                  namespace: "{{`{{ .RayCluster.Namespace }}`}}"
+                  port: {{`{{ .RayCluster.DashboardPort }}`}}
+    - kind: IngressRoute
+      apiVersion: traefik.io/v1alpha1
+      namePrefix: bearer-auth-route
+      template: |
+        spec:
+          entryPoints:
+            - web
+          routes:
+            - match: "Host(`{{`{{ .RayCluster.Name }}-{{ .RayCluster.EncodedNamespace }}.{{ .Domain }}`}}`) && PathPrefix(`/bearer-auth`)"
+              kind: Rule
+              priority: 110
+              middlewares:
+                - name: cluster-bearer-auth-{{`{{ .RayCluster.Name }}`}}
+                  namespace: "{{`{{ .RayCluster.Namespace }}`}}"
+                - name: strip-bearer-auth-suffix
+                  namespace: {{ .Values.namespace }}
+              services:
+                - name: "{{`{{ .RayCluster.Name }}`}}-head-svc"
+                  namespace: "{{`{{ .RayCluster.Namespace }}`}}"
+                  port: {{`{{ .RayCluster.DashboardPort }}`}}
+---
+apiVersion: access.sagemaker.amazonaws.com/v1alpha1
+kind: HyperpodRayEndpointAccessStrategy
+metadata:
+  name: ray-access-strategy-public
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "hyperpod-ray-endpoint-operator.name" . }}
+    app.kubernetes.io/component: access-strategy
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  accessType: public
+  bearerAuthURLTemplate: "https://{{`{{ .RayCluster.Name }}-{{ .RayCluster.EncodedNamespace }}.{{ .Domain }}`}}/bearer-auth"
+  accessResourceTemplates:
+    - kind: Middleware
+      apiVersion: traefik.io/v1alpha1
+      namePrefix: cluster-forward-auth
+      template: |
+        spec:
+          forwardAuth:
+            address: "http://{{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "auth-middleware" "context" $) }}.{{ .Values.namespace }}.svc.cluster.local:8080/verify?cluster-uid={{`{{ .RayCluster.UID }}`}}"
+            trustForwardHeader: false
+            addAuthCookiesToResponse:
+              - ray_session
+            authRequestHeaders:
+              - Host
+              - X-Forwarded-Host
+              - X-Forwarded-Uri
+              - Cookie
+              - Authorization
+    - kind: Middleware
+      apiVersion: traefik.io/v1alpha1
+      namePrefix: cluster-bearer-auth
+      template: |
+        spec:
+          forwardAuth:
+            address: "http://{{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "auth-middleware" "context" $) }}.{{ .Values.namespace }}.svc.cluster.local:8080/bearer-auth?cluster-uid={{`{{ .RayCluster.UID }}`}}"
+            trustForwardHeader: false
+            addAuthCookiesToResponse:
+              - ray_session
+            authRequestHeaders:
+              - Host
+              - X-Forwarded-Host
+              - X-Forwarded-Uri
+              - Cookie
+              - Authorization
+    - kind: IngressRoute
+      apiVersion: traefik.io/v1alpha1
+      namePrefix: authorized-route
+      template: |
+        spec:
+          entryPoints:
+            - web
+          routes:
+            - match: "Host(`{{`{{ .RayCluster.Name }}-{{ .RayCluster.EncodedNamespace }}.{{ .Domain }}`}}`)"
+              kind: Rule
+              priority: 100
+              middlewares:
+                - name: cluster-forward-auth-{{`{{ .RayCluster.Name }}`}}
+                  namespace: "{{`{{ .RayCluster.Namespace }}`}}"
+              services:
+                - name: "{{`{{ .RayCluster.Name }}`}}-head-svc"
+                  namespace: "{{`{{ .RayCluster.Namespace }}`}}"
+                  port: {{`{{ .RayCluster.DashboardPort }}`}}
+    - kind: IngressRoute
+      apiVersion: traefik.io/v1alpha1
+      namePrefix: bearer-auth-route
+      template: |
+        spec:
+          entryPoints:
+            - web
+          routes:
+            - match: "Host(`{{`{{ .RayCluster.Name }}-{{ .RayCluster.EncodedNamespace }}.{{ .Domain }}`}}`) && PathPrefix(`/bearer-auth`)"
+              kind: Rule
+              priority: 110
+              middlewares:
+                - name: cluster-bearer-auth-{{`{{ .RayCluster.Name }}`}}
+                  namespace: "{{`{{ .RayCluster.Namespace }}`}}"
+                - name: strip-bearer-auth-suffix
+                  namespace: {{ .Values.namespace }}
+              services:
+                - name: "{{`{{ .RayCluster.Name }}`}}-head-svc"
+                  namespace: "{{`{{ .RayCluster.Namespace }}`}}"
+                  port: {{`{{ .RayCluster.DashboardPort }}`}}

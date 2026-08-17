@@ -1,0 +1,125 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  labels:
+    app.kubernetes.io/component: jwt-rotator
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/name: {{ include "hyperpod-ray-endpoint-operator.name" . }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  name: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "jwt-rotator" "context" $) }}
+  namespace: {{ .Values.namespace }}
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/component: jwt-rotator
+            app.kubernetes.io/name: {{ include "hyperpod-ray-endpoint-operator.name" . }}
+            helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+            app.kubernetes.io/instance: {{ .Release.Name }}
+            app.kubernetes.io/managed-by: {{ .Release.Service }}
+        spec:
+          containers:
+          - command:
+            - /rotator
+            - --secret-name={{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "extensionapi-jwt-secret" "context" $) }}
+            - --secret-namespace={{ .Values.namespace }}
+            - --number-of-keys=13
+            {{- if .Values.kmsKeyArn }}
+            - --kms-key-arn={{ .Values.kmsKeyArn }}
+            {{- end }}
+            image: {{ include "hyperpod-ray-endpoint-operator.imageUri" . }}
+            name: rotator
+            resources:
+              limits:
+                cpu: 100m
+                memory: 128Mi
+              requests:
+                cpu: 50m
+                memory: 64Mi
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                - ALL
+              readOnlyRootFilesystem: true
+          # Never (not OnFailure) so failed pods are preserved for log inspection.
+          # With OnFailure, pods are deleted after backoffLimit and logs are lost.
+          restartPolicy: Never
+          securityContext:
+            fsGroup: 65532
+            runAsGroup: 65532
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          serviceAccountName: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "jwt-rotator" "context" $) }}
+  schedule: '*/30 * * * *'
+  successfulJobsHistoryLimit: 3
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    app.kubernetes.io/component: jwt-rotator
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/name: {{ include "hyperpod-ray-endpoint-operator.name" . }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  name: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "jwt-rotator-init" "context" $) }}
+  namespace: {{ .Values.namespace }}
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": hook-succeeded,before-hook-creation
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: jwt-rotator
+        app.kubernetes.io/name: {{ include "hyperpod-ray-endpoint-operator.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+    spec:
+      containers:
+      - command:
+        - /rotator
+        - --secret-name={{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "extensionapi-jwt-secret" "context" $) }}
+        - --secret-namespace={{ .Values.namespace }}
+        - --number-of-keys=13
+        {{- if .Values.kmsKeyArn }}
+        - --kms-key-arn={{ .Values.kmsKeyArn }}
+        {{- end }}
+        image: {{ include "hyperpod-ray-endpoint-operator.imageUri" . }}
+        imagePullPolicy: {{ .Values.manager.image.pullPolicy }}
+        name: rotator
+        resources:
+          limits:
+            cpu: 100m
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+      # Never (not OnFailure) so failed pods are preserved for log inspection.
+      # With OnFailure, pods are deleted after backoffLimit and logs are lost.
+      restartPolicy: Never
+      securityContext:
+        fsGroup: 65532
+        runAsGroup: 65532
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "jwt-rotator" "context" $) }}

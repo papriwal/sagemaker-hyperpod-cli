@@ -1,0 +1,99 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    "helm.sh/resource-policy": keep
+    controller-gen.kubebuilder.io/version: v0.20.1
+  name: hyperpodrayendpointaccessstrategies.access.sagemaker.amazonaws.com
+spec:
+  group: access.sagemaker.amazonaws.com
+  names:
+    kind: HyperpodRayEndpointAccessStrategy
+    listKind: HyperpodRayEndpointAccessStrategyList
+    plural: hyperpodrayendpointaccessstrategies
+    singular: hyperpodrayendpointaccessstrategy
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: HyperpodRayEndpointAccessStrategy defines how dashboard access
+          is configured for RayClusters.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: HyperpodRayEndpointAccessStrategySpec defines the desired
+              state of HyperpodRayEndpointAccessStrategy.
+            properties:
+              accessResourceTemplates:
+                description: AccessResourceTemplates defines Kubernetes resources
+                  to create per RayCluster.
+                items:
+                  description: AccessResourceTemplate defines a templated resource
+                    the controller creates per RayCluster.
+                  properties:
+                    apiVersion:
+                      description: APIVersion of the resource.
+                      type: string
+                    kind:
+                      description: Kind of the resource (e.g., IngressRoute).
+                      type: string
+                    namePrefix:
+                      description: NamePrefix is prepended to the RayCluster name
+                        to form the resource name.
+                      type: string
+                    template:
+                      description: Template is a Go template that renders the resource
+                        spec.
+                      type: string
+                  required:
+                  - apiVersion
+                  - kind
+                  - namePrefix
+                  - template
+                  type: object
+                type: array
+              accessType:
+                description: 'AccessType controls ownership checks: "ownerOnly" or
+                  "public".'
+                enum:
+                - ownerOnly
+                - public
+                type: string
+              bearerAuthURLTemplate:
+                description: |-
+                  BearerAuthURLTemplate is a Go template for generating the dashboard URL.
+                  Available variables: .RayCluster.Name, .RayCluster.Namespace, .RayCluster.EncodedNamespace, .Domain
+                type: string
+              displayName:
+                description: DisplayName is a human-readable name for this strategy.
+                type: string
+            required:
+            - accessType
+            - bearerAuthURLTemplate
+            type: object
+          status:
+            description: HyperpodRayEndpointAccessStrategyStatus defines the observed
+              state.
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

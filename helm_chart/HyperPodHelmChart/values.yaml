@@ -282,3 +282,21 @@ hyperpod-patching:
   enabled: true
 gpu-operator:
   enabled: false
+
+hyperpod-ray-endpoint-operator:
+  enabled: false
+  # Namespace for the ray endpoint operator resources (default: hyperpod-ray)
+  namespace: "hyperpod-ray"
+  # AWS region for resolving regional ECR image registries
+  region: ""
+  # Container image configuration
+  image:
+    # Image tag override (defaults to Chart.appVersion)
+    # tag: ""
+    # Override the full image URI (skips region-based resolution)
+    # Example: "622623004016.dkr.ecr.us-east-1.amazonaws.com/hyperpod-ray-endpoint-operator:0.1.0"
+    override: ""
+  # KMS key ARN for JWT signing (optional)
+  kmsKeyArn: ""
+  # Domain for Ray dashboard URLs
+  domain: ""

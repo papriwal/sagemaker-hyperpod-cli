@@ -1,0 +1,15 @@
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: {{ .Values.namespace }}/{{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "extension-api-cert" "context" $) }}
+  name: v1alpha1.connection.access.sagemaker.amazonaws.com
+spec:
+  group: connection.access.sagemaker.amazonaws.com
+  groupPriorityMinimum: 100
+  insecureSkipTLSVerify: false
+  service:
+    name: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "extension-api" "context" $) }}
+    namespace: {{ .Values.namespace }}
+  version: v1alpha1
+  versionPriority: 100

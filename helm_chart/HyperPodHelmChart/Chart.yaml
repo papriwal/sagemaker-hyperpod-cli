@@ -92,3 +92,7 @@ dependencies:
     version: "0.1.0"
     repository: "file://charts/gpu-operator"
     condition: gpu-operator.enabled
+  - name: hyperpod-ray-endpoint-operator
+    version: "0.1.0"
+    repository: "file://charts/hyperpod-ray-endpoint-operator"
+    condition: hyperpod-ray-endpoint-operator.enabled

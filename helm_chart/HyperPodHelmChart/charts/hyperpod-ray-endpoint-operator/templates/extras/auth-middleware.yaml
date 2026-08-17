@@ -1,0 +1,133 @@
+{{- if or (not (hasKey .Values.authMiddleware "enabled")) (.Values.authMiddleware.enabled) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/name: {{ include "hyperpod-ray-endpoint-operator.name" . }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: auth-middleware
+  name: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "auth-middleware" "context" $) }}
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.authMiddleware.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "hyperpod-ray-endpoint-operator.name" . }}
+      app.kubernetes.io/component: auth-middleware
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "hyperpod-ray-endpoint-operator.name" . }}
+        helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+        app.kubernetes.io/component: auth-middleware
+    spec:
+      {{- with .Values.authMiddleware.tolerations }}
+      tolerations: {{ toYaml . | nindent 10 }}
+      {{- end }}
+      containers:
+      - command:
+        - /authmiddleware
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: PORT
+          value: {{ .Values.authMiddleware.env.port | quote }}
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: JWT_SECRET_NAME
+          value: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "extensionapi-jwt-secret" "context" $) | quote }}
+        - name: JWT_ISSUER
+          value: {{ .Values.authMiddleware.env.jwtIssuer | quote }}
+        - name: JWT_AUDIENCE
+          value: {{ .Values.authMiddleware.env.jwtAudience | quote }}
+        - name: SESSION_TTL
+          value: {{ .Values.authMiddleware.env.sessionTTL | quote }}
+        - name: COOKIE_NAME
+          value: {{ .Values.authMiddleware.env.cookieName | quote }}
+        - name: COOKIE_SECURE
+          value: {{ .Values.authMiddleware.env.cookieSecure | quote }}
+        - name: COOKIE_SAMESITE
+          value: {{ .Values.authMiddleware.env.cookieSameSite | quote }}
+        - name: LOG_FILE_PATH
+          value: {{ .Values.authMiddleware.env.logFilePath | quote }}
+        image: {{ include "hyperpod-ray-endpoint-operator.imageUri" . }}
+        {{- with .Values.authMiddleware.image.pullPolicy }}
+        imagePullPolicy: {{ . }}
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        name: authmiddleware
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          {{- toYaml .Values.authMiddleware.resources | nindent 10 }}
+        securityContext:
+          {{- toYaml .Values.authMiddleware.securityContext | nindent 10 }}
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp
+        - mountPath: /var/log/aws/clusters
+          name: log
+      {{- with .Values.authMiddleware.nodeSelector }}
+      nodeSelector: {{ toYaml . | nindent 10 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.authMiddleware.podSecurityContext | nindent 8 }}
+      serviceAccountName: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "auth-middleware" "context" $) }}
+      {{- if and (hasKey .Values.authMiddleware "terminationGracePeriodSeconds") (ne .Values.authMiddleware.terminationGracePeriodSeconds nil) }}
+      terminationGracePeriodSeconds: {{ .Values.authMiddleware.terminationGracePeriodSeconds }}
+      {{- end }}
+      volumes:
+      - emptyDir: {}
+        name: tmp
+      - hostPath:
+          path: /var/log/aws/clusters/
+        name: log
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: auth-middleware
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/name: {{ include "hyperpod-ray-endpoint-operator.name" . }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  name: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "auth-middleware" "context" $) }}
+  namespace: {{ .Values.namespace }}
+spec:
+  ports:
+  - name: http
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/component: auth-middleware
+    app.kubernetes.io/name: {{ include "hyperpod-ray-endpoint-operator.name" . }}
+  type: ClusterIP
+{{- end }}

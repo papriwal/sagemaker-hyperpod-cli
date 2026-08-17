@@ -1,0 +1,20 @@
+{{- if .Values.certManager.enable }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/name: {{ include "hyperpod-ray-endpoint-operator.name" . }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  name: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "serving-cert" "context" $) }}
+  namespace: {{ .Values.namespace }}
+spec:
+  dnsNames:
+  - {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}.{{ .Values.namespace }}.svc
+  - {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}.{{ .Values.namespace }}.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "selfsigned-issuer" "context" $) }}
+  secretName: webhook-server-cert
+{{- end }}

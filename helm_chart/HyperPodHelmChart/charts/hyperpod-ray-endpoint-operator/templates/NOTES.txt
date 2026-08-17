@@ -1,0 +1,15 @@
+Thank you for installing {{ .Chart.Name }}.
+
+Your release is named {{ .Release.Name }}.
+
+The controller and CRDs have been installed in namespace {{ .Values.namespace }}.
+
+To verify the installation:
+
+  kubectl get pods -n {{ .Values.namespace }}
+  kubectl get customresourcedefinitions
+
+To learn more about the release, try:
+
+  $ helm status {{ .Release.Name }} -n {{ .Values.namespace }}
+  $ helm get all {{ .Release.Name }} -n {{ .Values.namespace }}

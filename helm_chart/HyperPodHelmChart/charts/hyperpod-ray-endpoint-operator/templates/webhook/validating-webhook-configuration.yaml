@@ -1,0 +1,91 @@
+{{- if .Values.webhook.enable }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  annotations:
+    {{- if .Values.certManager.enable }}
+    cert-manager.io/inject-ca-from: {{ .Values.namespace }}/{{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "serving-cert" "context" $) }}
+    {{- end }}
+  name: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "validating-webhook-configuration" "context" $) }}
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}
+      namespace: {{ .Values.namespace }}
+      path: /validate-ray-io-v1-raycluster
+  failurePolicy: Fail
+  name: vraycluster-v1.kb.io
+  rules:
+  - apiGroups:
+    - ray.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - rayclusters
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}
+      namespace: {{ .Values.namespace }}
+      path: /validate-ray-io-v1-rayjob
+  failurePolicy: Fail
+  name: vrayjob-v1.kb.io
+  rules:
+  - apiGroups:
+    - ray.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - rayjobs
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}
+      namespace: {{ .Values.namespace }}
+      path: /validate-ray-io-v1-rayservice
+  failurePolicy: Fail
+  name: vrayservice-v1.kb.io
+  rules:
+  - apiGroups:
+    - ray.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - rayservices
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}
+      namespace: {{ .Values.namespace }}
+      path: /validate-ray-io-v1-raycronjob
+  failurePolicy: Fail
+  name: vraycronjob-v1.kb.io
+  rules:
+  - apiGroups:
+    - ray.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - raycronjobs
+  sideEffects: None
+{{- end }}

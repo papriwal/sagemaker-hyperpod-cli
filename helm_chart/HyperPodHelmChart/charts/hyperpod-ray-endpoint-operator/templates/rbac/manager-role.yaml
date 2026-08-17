@@ -1,0 +1,110 @@
+apiVersion: rbac.authorization.k8s.io/v1
+{{- if .Values.rbac.namespaced }}
+kind: Role
+{{- else }}
+kind: ClusterRole
+{{- end }}
+metadata:
+{{- if .Values.rbac.namespaced }}
+  namespace: {{ .Values.namespace }}
+{{- end }}
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/name: {{ include "hyperpod-ray-endpoint-operator.name" . }}
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  name: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "manager-role" "context" $) }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ray.io
+  resources:
+  - rayclusters
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ray.io
+  resources:
+  - rayclusters/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ray.io
+  resources:
+  - rayjobs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ray.io
+  resources:
+  - rayservices
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ray.io
+  resources:
+  - raycronjobs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - access.sagemaker.amazonaws.com
+  resources:
+  - hyperpodrayendpointaccessstrategies
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+- apiGroups:
+  - traefik.io
+  resources:
+  - ingressroutes
+  - middlewares
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch

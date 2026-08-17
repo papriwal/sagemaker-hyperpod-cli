@@ -1,0 +1,87 @@
+{{- if .Values.webhook.enable }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  annotations:
+    {{- if .Values.certManager.enable }}
+    cert-manager.io/inject-ca-from: {{ .Values.namespace }}/{{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "serving-cert" "context" $) }}
+    {{- end }}
+  name: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "mutating-webhook-configuration" "context" $) }}
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}
+      namespace: {{ .Values.namespace }}
+      path: /mutate-ray-io-v1-raycluster
+  failurePolicy: Ignore
+  name: mraycluster-v1.kb.io
+  rules:
+  - apiGroups:
+    - ray.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - rayclusters
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}
+      namespace: {{ .Values.namespace }}
+      path: /mutate-ray-io-v1-rayjob
+  failurePolicy: Ignore
+  name: mrayjob-v1.kb.io
+  rules:
+  - apiGroups:
+    - ray.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - rayjobs
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}
+      namespace: {{ .Values.namespace }}
+      path: /mutate-ray-io-v1-rayservice
+  failurePolicy: Ignore
+  name: mrayservice-v1.kb.io
+  rules:
+  - apiGroups:
+    - ray.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - rayservices
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "hyperpod-ray-endpoint-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}
+      namespace: {{ .Values.namespace }}
+      path: /mutate-ray-io-v1-raycronjob
+  failurePolicy: Ignore
+  name: mraycronjob-v1.kb.io
+  rules:
+  - apiGroups:
+    - ray.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - raycronjobs
+  sideEffects: None
+{{- end }}
