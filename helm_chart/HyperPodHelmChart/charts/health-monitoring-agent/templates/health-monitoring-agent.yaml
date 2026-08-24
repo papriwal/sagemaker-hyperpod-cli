@@ -159,6 +159,7 @@ spec:
             - name: localtime
               mountPath: /etc/localtime
               readOnly: true
+      priorityClassName: {{ .Values.priorityClassName | default "system-node-critical" }}
       serviceAccountName: health-monitoring-agent
       volumes:
         - name: log
@@ -250,6 +251,7 @@ spec:
             - name: localtime
               mountPath: /etc/localtime
               readOnly: true
+      priorityClassName: {{ .Values.priorityClassName | default "system-node-critical" }}
       serviceAccountName: health-monitoring-agent
       volumes:
         - name: log

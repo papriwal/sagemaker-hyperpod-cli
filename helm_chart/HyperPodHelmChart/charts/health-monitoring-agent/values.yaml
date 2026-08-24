@@ -30,3 +30,8 @@ hmaimage: ""
 
 # Enable debug output for region selection process
 debug: true
+
+# PriorityClass for the HMA DaemonSet pods.
+# system-node-critical ensures HMA is the last pod evicted under node pressure
+# (e.g. DiskPressure), preventing loss of health monitoring. See P438078245.
+priorityClassName: system-node-critical
