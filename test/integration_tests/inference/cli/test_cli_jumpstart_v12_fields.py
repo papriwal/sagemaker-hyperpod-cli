@@ -33,7 +33,7 @@ def test_create_with_v12_fields(runner, endpoint_name):
     result = runner.invoke(js_create, [
         "--namespace", NAMESPACE,
         "--version", VERSION,
-        "--model-id", "deepseek-llm-r1-distill-qwen-1-5b",
+        "--model-id", "huggingface-llm-phi-2",
         "--instance-type", "ml.g5.8xlarge",
         "--endpoint-name", endpoint_name,
         "--accept-eula", "True",

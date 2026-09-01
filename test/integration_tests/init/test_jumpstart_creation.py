@@ -88,7 +88,7 @@ def test_configure_jumpstart(runner, js_endpoint_name, test_directory):
         configure = init.configure
     result = runner.invoke(
         configure, [
-            "--model-id", "deepseek-llm-r1-distill-qwen-1-5b",
+            "--model-id", "huggingface-llm-phi-2",
             "--instance-type", "ml.g5.8xlarge", 
             "--endpoint-name", js_endpoint_name
         ], catch_exceptions=False
@@ -97,7 +97,7 @@ def test_configure_jumpstart(runner, js_endpoint_name, test_directory):
     
     # Verify configuration was saved correctly
     expected_config = {
-        "model_id": "deepseek-llm-r1-distill-qwen-1-5b",
+        "model_id": "huggingface-llm-phi-2",
         "instance_type": "ml.g5.8xlarge",
         "endpoint_name": js_endpoint_name
     }
