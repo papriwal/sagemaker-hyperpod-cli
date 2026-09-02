@@ -1,5 +1,18 @@
 # Changelog
 
+## v3.11.0 (2026-09-02)
+
+### Features
+- Upgrade the bundled inference operator to v3.5 and add model-weight cache node affinity support to the `InferenceEndpointConfig` and `JumpStartModel` CRDs (#455)
+
+### Bug Fixes and Other Changes
+- Use Phi-2 for JumpStart integration tests so inference coverage runs reliably on `ml.g5.8xlarge` instances (#452)
+
+### Helm Chart Changes
+- Run NVIDIA and non-NVIDIA health-monitoring agents with `system-node-critical` priority by default, with support for configuring the priority class (#451)
+- Make deep-health-check and MPI namespace creation optional and support deploying deep health checks into a configurable, pre-existing namespace (#422)
+- Update the inference-operator subchart from 2.4.0 to 2.5.0 and its operator image from v3.4 to v3.5 (#455)
+
 ## v3.10.0 (2026-08-21)
 
 ### Features
