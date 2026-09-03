@@ -27,36 +27,15 @@ from sagemaker.hyperpod.common.telemetry.constants import Feature
 from sagemaker.hyperpod.common.cli_decorators import handle_cli_exceptions
 
 
-def _get_eks_api_client():
-    """Load kubeconfig and create an authenticated API client.
+def _load_kube_config():
+    """Load kubeconfig so the default ApiClient is authenticated.
 
-    Works around a kubernetes-client issue where exec-based tokens
-    are not properly forwarded in the Authorization header.
+    Uses the library's default client (as HPSpace does) rather than copying
+    the token out of Configuration.api_key. The api_key entry is named
+    differently across kubernetes-client releases ("authorization" in 36.0.0,
+    "BearerToken" in 36.0.3+), so reading it by name is version-fragile.
     """
     config.load_kube_config()
-    configuration = client.Configuration.get_default_copy()
-
-    # Extract the token from the exec provider
-    token = None
-    if configuration.api_key and "authorization" in configuration.api_key:
-        token_value = configuration.api_key["authorization"]
-        prefix = "Bearer "
-        if token_value.startswith(prefix):
-            token = token_value.removeprefix(prefix)
-        else:
-            token = token_value
-
-    # Clear api_key to avoid double-auth conflicts
-    configuration.api_key = {}
-    configuration.api_key_prefix = {}
-
-    if token:
-        return client.ApiClient(
-            configuration,
-            header_name="Authorization",
-            header_value=f"Bearer {token}",
-        )
-    return client.ApiClient(configuration)
 
 
 @click.command("ray-dashboard-connection")
@@ -66,7 +45,7 @@ def _get_eks_api_client():
 @handle_cli_exceptions()
 def create_ray_dashboard_connection(cluster_name, namespace):
     """Create a RayDashboardConnection to get a dashboard URL for a RayCluster."""
-    api_client = _get_eks_api_client()
+    _load_kube_config()
 
     body = {
         "apiVersion": f"{RAY_DASHBOARD_CONNECTION_GROUP}/{RAY_DASHBOARD_CONNECTION_VERSION}",
@@ -79,7 +58,7 @@ def create_ray_dashboard_connection(cluster_name, namespace):
         },
     }
 
-    api = client.CustomObjectsApi(api_client)
+    api = client.CustomObjectsApi()
 
     try:
         result = api.create_namespaced_custom_object(

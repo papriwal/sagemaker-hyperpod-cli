@@ -13,9 +13,9 @@ class TestRayDashboardConnectionCommand:
     def setup_method(self):
         self.runner = CliRunner()
 
-    @patch('sagemaker.hyperpod.cli.commands.ray_dashboard_connection._get_eks_api_client')
+    @patch('sagemaker.hyperpod.cli.commands.ray_dashboard_connection._load_kube_config')
     @patch('sagemaker.hyperpod.cli.commands.ray_dashboard_connection.client.CustomObjectsApi')
-    def test_create_success_returns_url(self, mock_custom_objects_api_class, mock_get_client):
+    def test_create_success_returns_url(self, mock_custom_objects_api_class, mock_load_config):
         """Test successful creation returns the connection URL"""
         mock_api = Mock()
         mock_api.create_namespaced_custom_object.return_value = {
@@ -24,7 +24,6 @@ class TestRayDashboardConnectionCommand:
             }
         }
         mock_custom_objects_api_class.return_value = mock_api
-        mock_get_client.return_value = Mock()
 
         result = self.runner.invoke(create_ray_dashboard_connection, [
             '--cluster-name', 'my-raycluster',
@@ -46,16 +45,15 @@ class TestRayDashboardConnectionCommand:
             },
         )
 
-    @patch('sagemaker.hyperpod.cli.commands.ray_dashboard_connection._get_eks_api_client')
+    @patch('sagemaker.hyperpod.cli.commands.ray_dashboard_connection._load_kube_config')
     @patch('sagemaker.hyperpod.cli.commands.ray_dashboard_connection.client.CustomObjectsApi')
-    def test_create_default_namespace(self, mock_custom_objects_api_class, mock_get_client):
+    def test_create_default_namespace(self, mock_custom_objects_api_class, mock_load_config):
         """Test namespace defaults to 'default' when not specified"""
         mock_api = Mock()
         mock_api.create_namespaced_custom_object.return_value = {
             "status": {"connectionUrl": "https://example.com/dashboard"}
         }
         mock_custom_objects_api_class.return_value = mock_api
-        mock_get_client.return_value = Mock()
 
         result = self.runner.invoke(create_ray_dashboard_connection, [
             '--cluster-name', 'my-raycluster',
@@ -66,16 +64,15 @@ class TestRayDashboardConnectionCommand:
         call_kwargs = mock_api.create_namespaced_custom_object.call_args[1]
         assert call_kwargs["namespace"] == "default"
 
-    @patch('sagemaker.hyperpod.cli.commands.ray_dashboard_connection._get_eks_api_client')
+    @patch('sagemaker.hyperpod.cli.commands.ray_dashboard_connection._load_kube_config')
     @patch('sagemaker.hyperpod.cli.commands.ray_dashboard_connection.client.CustomObjectsApi')
-    def test_create_empty_url_raises_error(self, mock_custom_objects_api_class, mock_get_client):
+    def test_create_empty_url_raises_error(self, mock_custom_objects_api_class, mock_load_config):
         """Test that empty connectionUrl raises an error"""
         mock_api = Mock()
         mock_api.create_namespaced_custom_object.return_value = {
             "status": {"connectionUrl": ""}
         }
         mock_custom_objects_api_class.return_value = mock_api
-        mock_get_client.return_value = Mock()
 
         result = self.runner.invoke(create_ray_dashboard_connection, [
             '--cluster-name', 'my-raycluster',
@@ -86,16 +83,15 @@ class TestRayDashboardConnectionCommand:
         assert "Failed to get dashboard URL" in result.output
         assert "contact your cluster administrator" in result.output
 
-    @patch('sagemaker.hyperpod.cli.commands.ray_dashboard_connection._get_eks_api_client')
+    @patch('sagemaker.hyperpod.cli.commands.ray_dashboard_connection._load_kube_config')
     @patch('sagemaker.hyperpod.cli.commands.ray_dashboard_connection.client.CustomObjectsApi')
-    def test_create_no_status_raises_error(self, mock_custom_objects_api_class, mock_get_client):
+    def test_create_no_status_raises_error(self, mock_custom_objects_api_class, mock_load_config):
         """Test that missing status raises an error"""
         mock_api = Mock()
         mock_api.create_namespaced_custom_object.return_value = {
             "metadata": {"name": "generated-name"}
         }
         mock_custom_objects_api_class.return_value = mock_api
-        mock_get_client.return_value = Mock()
 
         result = self.runner.invoke(create_ray_dashboard_connection, [
             '--cluster-name', 'my-raycluster',
@@ -104,9 +100,9 @@ class TestRayDashboardConnectionCommand:
         assert result.exit_code != 0
         assert "Failed to get dashboard URL" in result.output
 
-    @patch('sagemaker.hyperpod.cli.commands.ray_dashboard_connection._get_eks_api_client')
+    @patch('sagemaker.hyperpod.cli.commands.ray_dashboard_connection._load_kube_config')
     @patch('sagemaker.hyperpod.cli.commands.ray_dashboard_connection.client.CustomObjectsApi')
-    def test_create_404_api_not_installed(self, mock_custom_objects_api_class, mock_get_client):
+    def test_create_404_api_not_installed(self, mock_custom_objects_api_class, mock_load_config):
         """Test 404 when operator is not installed shows install instructions"""
         mock_api = Mock()
         mock_api.create_namespaced_custom_object.side_effect = ApiException(
@@ -123,7 +119,6 @@ class TestRayDashboardConnectionCommand:
             '"details":{"group":"connection.access.sagemaker.amazonaws.com","kind":"raydashboardconnections"}}'
         )
         mock_custom_objects_api_class.return_value = mock_api
-        mock_get_client.return_value = Mock()
 
         result = self.runner.invoke(create_ray_dashboard_connection, [
             '--cluster-name', 'my-raycluster',
@@ -135,9 +130,9 @@ class TestRayDashboardConnectionCommand:
         assert "hyperpod-ray-endpoint-operator" in result.output
 
     @patch('sagemaker.hyperpod.common.cli_decorators._namespace_exists', return_value=True)
-    @patch('sagemaker.hyperpod.cli.commands.ray_dashboard_connection._get_eks_api_client')
+    @patch('sagemaker.hyperpod.cli.commands.ray_dashboard_connection._load_kube_config')
     @patch('sagemaker.hyperpod.cli.commands.ray_dashboard_connection.client.CustomObjectsApi')
-    def test_create_404_namespace_not_found(self, mock_custom_objects_api_class, mock_get_client, mock_ns_exists):
+    def test_create_404_namespace_not_found(self, mock_custom_objects_api_class, mock_load_config, mock_ns_exists):
         """Test 404 for missing namespace shows raw error"""
         mock_api = Mock()
         mock_api.create_namespaced_custom_object.side_effect = ApiException(
@@ -147,7 +142,6 @@ class TestRayDashboardConnectionCommand:
         )
         mock_api.create_namespaced_custom_object.side_effect.body = '{"message":"namespaces not-exists not found"}'
         mock_custom_objects_api_class.return_value = mock_api
-        mock_get_client.return_value = Mock()
 
         result = self.runner.invoke(create_ray_dashboard_connection, [
             '--cluster-name', 'my-raycluster',
@@ -158,9 +152,9 @@ class TestRayDashboardConnectionCommand:
         assert "not found" in result.output.lower() or "not-exists" in result.output
 
     @patch('sagemaker.hyperpod.common.cli_decorators._namespace_exists', return_value=True)
-    @patch('sagemaker.hyperpod.cli.commands.ray_dashboard_connection._get_eks_api_client')
+    @patch('sagemaker.hyperpod.cli.commands.ray_dashboard_connection._load_kube_config')
     @patch('sagemaker.hyperpod.cli.commands.ray_dashboard_connection.client.CustomObjectsApi')
-    def test_create_403_raises_exception(self, mock_custom_objects_api_class, mock_get_client, mock_ns_exists):
+    def test_create_403_raises_exception(self, mock_custom_objects_api_class, mock_load_config, mock_ns_exists):
         """Test 403 forbidden is propagated as an error"""
         mock_api = Mock()
         exc = ApiException(
@@ -171,7 +165,6 @@ class TestRayDashboardConnectionCommand:
         exc.body = '{"message":"forbidden"}'
         mock_api.create_namespaced_custom_object.side_effect = exc
         mock_custom_objects_api_class.return_value = mock_api
-        mock_get_client.return_value = Mock()
 
         result = self.runner.invoke(create_ray_dashboard_connection, [
             '--cluster-name', 'my-raycluster',
